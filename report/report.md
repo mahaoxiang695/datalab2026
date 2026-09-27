@@ -87,5 +87,4 @@ if (shift > 31) {
 ## 参考的重要资料
 
 - DataLab README 与 bits.c 题面注释
-- 本机 WSL 下 gcc / btest / test.py 的实测输出
-- cursor在环境配置与代码排查过程的输出
+
