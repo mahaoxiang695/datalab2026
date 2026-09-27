@@ -19,7 +19,7 @@
  * Difficulty: 1
  */
 int bitAnd(int x, int y) {
-    return 2;
+    return ~(~x|~y);//德摩根律：x & y = ~(~x | ~y)
 }
 
 /*
@@ -30,7 +30,7 @@ int bitAnd(int x, int y) {
  *   Difficulty: 1
  */
 int bitXor(int x, int y) {
-    return 2;
+    return ~(x & y) & ~(~x & ~y);//写出来真值表看
 }
 
 /*
@@ -50,7 +50,10 @@ int bitXor(int x, int y) {
  *   1 if x and y have the same sign , 0 otherwise.
  */
 int samesign(int x, int y) {
-    return 2;
+    if(!(x&&y)){
+        return !x&&!y;
+    }//0情况
+    return !((x>>31)^(y>>31));//逻辑右移判断异号
 }
 
 /*
@@ -63,8 +66,25 @@ int samesign(int x, int y) {
  *   Difficulty: 4
  */
 int logtwo(int v) {
-    return 2;
+    int r = 0;
+    int shift;//二分法迭代下去：
+    shift = ((v >> 16) > 0) << 4;   // 16 或 0
+    r |= shift;
+    v >>= shift;
+    shift = ((v >> 8) > 0) << 3;    // 8 或 0
+    r |= shift;
+    v >>= shift;
+    shift = ((v >> 4) > 0) << 2;    // 4 或 0
+    r |= shift;
+    v >>= shift;
+    shift = ((v >> 2) > 0) << 1;    // 2 或 0
+    r |= shift;
+    v >>= shift;
+    shift = (v >> 1) > 0;           // 1 或 0
+    r |= shift;
+    return r;
 }
+
 
 /*
  *  byteSwap - swaps the nth byte and the mth byte
@@ -76,9 +96,15 @@ int logtwo(int v) {
  *    Difficulty: 2
  */
 int byteSwap(int x, int n, int m) {
-    return 2;
+    int nshift = n << 3;
+    int mshift = m << 3;
+    int nbyte = (x >> nshift) & 0xFF;
+    int mbyte = (x >> mshift) & 0xFF;
+    int mask = (0xFF << nshift) | (0xFF << mshift);
+    x = x & ~mask;
+    x = x | (nbyte << mshift) | (mbyte << nshift);
+    return x;
 }
-
 /*
  * reverse - Reverse the bit order of a 32-bit unsigned integer.
  *   Example: reverse(0xFFFF0000) = 0x0000FFFF reverse(0x80000000)=0x1 reverse(0xA0000000)=0x5
@@ -88,7 +114,14 @@ int byteSwap(int x, int n, int m) {
  *   Difficulty: 3
  */
 unsigned reverse(unsigned v) {
-    return 2;
+    unsigned r = 0;
+    int i = 32;
+    while (i) {
+        r = (r << 1) | (v & 1);
+        v = v >> 1;
+        i = i - 1;
+    }
+    return r;
 }
 
 /*
@@ -100,7 +133,9 @@ unsigned reverse(unsigned v) {
  *   Difficulty: 3
  */
 int logicalShift(int x, int n) {
-    return 2;
+    int t = 1 << (32 + ~n); /* 1 << (31-n) */
+    int mask = ((t + ~0) << 1) + 1;
+    return (x >> n) & mask;
 }
 
 /*
@@ -112,7 +147,31 @@ int logicalShift(int x, int n) {
  *   Difficulty: 4
  */
 int leftBitCount(int x) {
-    return 2;
+    int cnt = 0;
+    int t;
+
+    t = (!(~x >> 16)) << 4;
+    cnt = cnt + t;
+    x = x << t;
+
+    t = (!(~x >> 24)) << 3;
+    cnt = cnt + t;
+    x = x << t;
+
+    t = (!(~x >> 28)) << 2;
+    cnt = cnt + t;
+    x = x << t;
+
+    t = (!(~x >> 30)) << 1;
+    cnt = cnt + t;
+    x = x << t;
+
+    t = !(~x >> 31);
+    cnt = cnt + t;
+    x = x << t;
+
+    cnt = cnt + (!(~x >> 31));
+    return cnt;
 }
 
 /*
@@ -124,7 +183,34 @@ int leftBitCount(int x) {
  *   Difficulty: 4
  */
 unsigned float_i2f(int x) {
-    return 2;
+    unsigned s, a, e, frac;
+    if(!x){
+        return 0;
+    }
+    s=x&0x80000000;
+    if(x<0){
+        a=~x+1;
+    }
+    else{
+        a=x;
+    }
+    int n=31;
+    while(!(a>>n)){
+        n--;
+    }
+    e=n+127;
+    a=a<<(31-n);
+    frac=(a>>8)& 0X7FFFFF;
+    if(a&0x80){
+        if((a&0x7F)|(frac&1)){
+            frac++;
+        }
+    }
+    if(frac==0x800000){
+        frac=0;
+        e++;
+    }
+    return s|(e<<23)|frac;
 }
 
 /*
@@ -139,7 +225,25 @@ unsigned float_i2f(int x) {
  *   Difficulty: 4
  */
 unsigned floatScale2(unsigned uf) {
-    return 2;
+    unsigned s = uf & 0x80000000;
+    unsigned exp = (uf >> 23) & 0xFF;
+    unsigned frac = uf & 0x7FFFFF;
+    if (exp == 0xFF) {
+        return uf;
+    }
+    if (exp == 0) {
+        frac = frac << 1;
+        if (frac & 0x800000) {
+            exp = 1;
+            frac = frac & 0x7FFFFF;
+        }
+        return s | (exp << 23) | frac;
+    }
+    exp = exp + 1;
+    if (exp == 0xFF) {
+        return s | 0x7F800000;
+    }
+    return s | (exp << 23) | frac;
 }
 
 /*
@@ -156,7 +260,40 @@ unsigned floatScale2(unsigned uf) {
  *   Difficulty: 3
  */
 int float64_f2i(unsigned uf1, unsigned uf2) {
-    return 2;
+    int sign = uf2 >> 31;
+    int exp = (uf2 >> 20) & 0x7FF;
+    int E = exp - 1023;
+    unsigned hi = uf2 & 0xFFFFF;
+    unsigned lo = uf1;
+    int shift;
+    int val;
+
+    if (exp > 0x7FE) { /* Inf / NaN */
+        return 0x80000000;
+    }
+    if (exp < 1) { /* 零 / 非规格化 */
+        return 0;
+    }
+    if (E < 0) {
+        return 0;
+    }
+    if (E > 30) { /* 含 E>=31，放不进 int */
+        return 0x80000000;
+    }
+
+    hi = hi | 0x100000; /* 隐藏的 1，有效位在 bit52 */
+    shift = 52 - E;
+
+    if (shift > 31) {
+        val = hi >> (shift - 32);
+    } else {
+        val = (hi << (32 - shift)) | (lo >> shift);
+    }
+
+    if (sign) {
+        val = -val;
+    }
+    return val;
 }
 
 /*
@@ -173,5 +310,14 @@ int float64_f2i(unsigned uf1, unsigned uf2) {
  *   Difficulty: 4
  */
 unsigned floatPower2(int x) {
-    return 2;
+    if (x > 127) {
+        return 0x7F800000;
+    }
+    if (x < -149) {
+        return 0;
+    }
+    if (x < -126) {
+        return 1 << (x + 149);
+    }
+    return (x + 127) << 23;
 }
